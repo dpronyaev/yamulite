@@ -27,6 +27,24 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### ARM (Raspberry Pi / aarch64)
+
+На ARM PyQt6 недоступен через pip — его нужно установить через системный менеджер пакетов, а виртуальное окружение создать с доступом к системным пакетам:
+
+```bash
+sudo apt install python3-pyqt6 vlc
+
+python -m venv .venv --system-site-packages
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Если виртуальное окружение уже создано без флага, достаточно изменить одну строку в `.venv/pyvenv.cfg`:
+
+```
+include-system-site-packages = true
+```
+
 ## Запуск
 
 ```bash

@@ -1,4 +1,4 @@
-PyQt6>=6.6
+PyQt6>=6.4
 yandex-music>=2.2.0
 python-vlc>=3.0.18
 requests>=2.31
