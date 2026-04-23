@@ -79,8 +79,8 @@ class PlayerBar(QWidget):
             self.title.setText("—")
             return
         self.title.setText(
-            f"<b>{track.title or '—'}</b>  "
-            f"<span style='color:#888'>— {_artists_str(track)}</span>"
+            f"<b>{_artists_str(track)}</b>  "
+            f"<span style='color:#888'>— {track.title or '—'}</span>"
         )
 
     def _on_state(self, playing: bool) -> None:

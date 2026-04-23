@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QEvent, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QHBoxLayout, QLineEdit, QPushButton, QTabWidget, QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QPushButton, QTabWidget, QVBoxLayout, QWidget,
 )
 
+from .. import settings as user_settings
 from ..api import Api
 from ..workers import run
 from .widgets import (
@@ -16,6 +17,7 @@ class SearchPage(QWidget):
     track_play_requested = pyqtSignal(list, int)  # tracks, start_index
     album_opened = pyqtSignal(object)
     artist_opened = pyqtSignal(object)
+    likes_changed = pyqtSignal()
 
     def __init__(self, api: Api):
         super().__init__()
@@ -25,9 +27,18 @@ class SearchPage(QWidget):
         self._totals = {"tracks": 0, "albums": 0, "artists": 0}
 
         top = QHBoxLayout()
-        self.edit = QLineEdit()
-        self.edit.setPlaceholderText("Поиск трека, исполнителя или альбома…")
-        self.edit.returnPressed.connect(self._do_search)
+        self.edit = QComboBox()
+        self.edit.setEditable(True)
+        self.edit.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.edit.setMaxVisibleItems(user_settings.MAX_SEARCH_HISTORY)
+        self.edit.lineEdit().setPlaceholderText(
+            "Поиск трека, исполнителя или альбома…"
+        )
+        self.edit.lineEdit().returnPressed.connect(self._do_search)
+        self.edit.activated.connect(self._on_history_activated)
+        self._reload_history()
+        self.edit.setCurrentText("")
+        self.edit.lineEdit().installEventFilter(self)
         btn = QPushButton("Найти")
         btn.clicked.connect(self._do_search)
         top.addWidget(self.edit, 1)
@@ -49,6 +60,7 @@ class SearchPage(QWidget):
         self.tracks_list.play_requested.connect(
             lambda i: self.track_play_requested.emit(self.tracks_list.tracks(), i)
         )
+        self.tracks_list.likes_changed.connect(self.likes_changed.emit)
         self.albums_list.item_activated.connect(self.album_opened.emit)
         self.artists_list.item_activated.connect(self.artist_opened.emit)
 
@@ -61,14 +73,33 @@ class SearchPage(QWidget):
         self.tracks_list.set_liked_ids(ids)
 
     def _do_search(self) -> None:
-        q = self.edit.text().strip()
+        q = self.edit.currentText().strip()
         if not q:
             return
         self._query = q
         self._page = 0
         self._totals = {"tracks": 0, "albums": 0, "artists": 0}
         self.more_btn.setEnabled(False)
+        user_settings.add_search_history(q)
+        self._reload_history(keep_text=q)
         run(self.api.search, q, "all", page=0, on_result=self._on_first_result)
+
+    def _on_history_activated(self, _idx: int) -> None:
+        self._do_search()
+
+    def _reload_history(self, keep_text: str | None = None) -> None:
+        current = keep_text if keep_text is not None else self.edit.currentText()
+        self.edit.blockSignals(True)
+        self.edit.clear()
+        self.edit.addItems(user_settings.get_search_history())
+        self.edit.setCurrentText(current)
+        self.edit.blockSignals(False)
+
+    def eventFilter(self, obj, event):
+        if obj is self.edit.lineEdit() and event.type() == QEvent.Type.MouseButtonPress:
+            if self.edit.count() > 0 and not self.edit.view().isVisible():
+                QTimer.singleShot(0, self.edit.showPopup)
+        return super().eventFilter(obj, event)
 
     def _load_more(self) -> None:
         self._page += 1

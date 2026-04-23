@@ -50,7 +50,10 @@ class TrackRow(QWidget):
         self.play_btn.setFixedWidth(32)
         self.play_btn.clicked.connect(lambda: self.play_clicked.emit(self.index))
 
-        title = QLabel(f"<b>{track.title or '—'}</b>  <span style='color:#888'>— {_artists_str(track)}</span>")
+        title = QLabel(
+            f"<b>{_artists_str(track)}</b>  "
+            f"<span style='color:#888'>— {track.title or '—'}</span>"
+        )
         title.setTextFormat(Qt.TextFormat.RichText)
         title.setMinimumWidth(200)
 
@@ -101,6 +104,7 @@ class TrackRow(QWidget):
 class TrackList(QListWidget):
     """Generic list of tracks with play/like buttons."""
     play_requested = pyqtSignal(int)  # index
+    likes_changed = pyqtSignal()      # emitted after a like/unlike API call completes
 
     def __init__(self, api: Api):
         super().__init__()
@@ -140,7 +144,7 @@ class TrackList(QListWidget):
                 self.api.like(track_id)
             else:
                 self.api.unlike(track_id)
-        run(op)
+        run(op, on_result=lambda _=None: self.likes_changed.emit())
         tid = str(track_id)
         if new_state:
             self._liked_ids.add(tid)

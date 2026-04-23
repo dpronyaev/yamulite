@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QHBoxLayout, QListWidget, QMainWindow, QMessageBox, QStackedWidget,
     QStatusBar, QVBoxLayout, QWidget,
@@ -15,6 +15,7 @@ from .detail import AlbumPage, ArtistPage, PlaylistPage
 from .library import LibraryPage
 from .player_bar import PlayerBar
 from .search import SearchPage
+from .settings_dialog import SettingsDialog
 
 
 SECTIONS = ["Поиск", "Мне нравится и плейлисты"]
@@ -34,6 +35,8 @@ class MainWindow(QMainWindow):
         self.sidebar = QListWidget()
         self.sidebar.addItems(SECTIONS)
         self.sidebar.setFixedWidth(200)
+        for i in range(self.sidebar.count()):
+            self.sidebar.item(i).setSizeHint(QSize(0, 34))
         self.sidebar.currentRowChanged.connect(self._on_section_changed)
 
         # pages
@@ -52,11 +55,14 @@ class MainWindow(QMainWindow):
         self.search_page.track_play_requested.connect(self._play)
         self.search_page.album_opened.connect(self._open_album)
         self.search_page.artist_opened.connect(self._open_artist)
+        self.search_page.likes_changed.connect(self._refresh_likes_and_library)
         self.library_page.track_play_requested.connect(self._play)
         self.library_page.playlist_opened.connect(self._open_playlist)
+        self.library_page.likes_changed.connect(self._refresh_likes_and_library)
 
         for page in (self.album_page, self.artist_page, self.playlist_page):
             page.track_play_requested.connect(self._play)
+            page.likes_changed.connect(self._refresh_likes_and_library)
             page.back_btn.clicked.connect(lambda _=False: self.stack.setCurrentIndex(
                 0 if self.sidebar.currentRow() == 0 else 1
             ))
@@ -91,6 +97,10 @@ class MainWindow(QMainWindow):
 
         # logout via menu
         file_menu = self.menuBar().addMenu("Файл")
+        settings_act = file_menu.addAction("Настройки…")
+        settings_act.setMenuRole(QAction.MenuRole.PreferencesRole)
+        settings_act.triggered.connect(self._open_settings)
+        file_menu.addSeparator()
         logout_act = file_menu.addAction("Выйти из аккаунта")
         logout_act.triggered.connect(self._logout)
 
@@ -137,6 +147,10 @@ class MainWindow(QMainWindow):
         for p in (self.search_page, self.library_page,
                   self.album_page, self.artist_page, self.playlist_page):
             p.set_liked_ids(ids)
+
+    # --- settings --------------------------------------------------------
+    def _open_settings(self) -> None:
+        SettingsDialog(self).exec()
 
     # --- logout ----------------------------------------------------------
     def _logout(self) -> None:

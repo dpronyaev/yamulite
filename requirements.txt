@@ -3,3 +3,4 @@ yandex-music>=2.2.0
 python-vlc>=3.0.18
 requests>=2.31
 keyring>=24.0
+pyobjc-framework-Cocoa>=9.0; sys_platform == "darwin"

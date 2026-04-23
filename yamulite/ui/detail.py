@@ -11,6 +11,7 @@ from .widgets import TrackList
 
 class _TracksPage(QWidget):
     track_play_requested = pyqtSignal(list, int)
+    likes_changed = pyqtSignal()
 
     def __init__(self, api: Api, title: str):
         super().__init__()
@@ -22,6 +23,7 @@ class _TracksPage(QWidget):
         self.tracks.play_requested.connect(
             lambda i: self.track_play_requested.emit(self.tracks.tracks(), i)
         )
+        self.tracks.likes_changed.connect(self.likes_changed.emit)
         self.more_btn = QPushButton("Показать ещё")
         self.more_btn.setVisible(False)
 

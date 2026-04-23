@@ -11,6 +11,7 @@ from .widgets import SimpleList, TrackList, fmt_playlist
 class LibraryPage(QWidget):
     track_play_requested = pyqtSignal(list, int)
     playlist_opened = pyqtSignal(object)
+    likes_changed = pyqtSignal()
 
     def __init__(self, api: Api):
         super().__init__()
@@ -26,6 +27,7 @@ class LibraryPage(QWidget):
         self.liked.play_requested.connect(
             lambda i: self.track_play_requested.emit(self.liked.tracks(), i)
         )
+        self.liked.likes_changed.connect(self.likes_changed.emit)
         self.playlists.item_activated.connect(self.playlist_opened.emit)
 
         root = QVBoxLayout(self)
